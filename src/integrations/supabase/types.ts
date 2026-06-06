@@ -14,16 +14,374 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      fixtures: {
+        Row: {
+          away_goals: number | null
+          away_team_id: string
+          home_goals: number | null
+          home_team_id: string
+          id: string
+          kickoff_at: string
+          matchday: number
+          status: Database["public"]["Enums"]["fixture_status"]
+        }
+        Insert: {
+          away_goals?: number | null
+          away_team_id: string
+          home_goals?: number | null
+          home_team_id: string
+          id?: string
+          kickoff_at: string
+          matchday: number
+          status?: Database["public"]["Enums"]["fixture_status"]
+        }
+        Update: {
+          away_goals?: number | null
+          away_team_id?: string
+          home_goals?: number | null
+          home_team_id?: string
+          id?: string
+          kickoff_at?: string
+          matchday?: number
+          status?: Database["public"]["Enums"]["fixture_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fixtures_away_team_id_fkey"
+            columns: ["away_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixtures_home_team_id_fkey"
+            columns: ["home_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      league_members: {
+        Row: {
+          id: string
+          joined_at: string
+          league_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          joined_at?: string
+          league_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          joined_at?: string
+          league_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "league_members_league_id_fkey"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "league_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leagues: {
+        Row: {
+          created_at: string
+          creator_id: string
+          id: string
+          invite_code: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          creator_id: string
+          id?: string
+          invite_code: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          creator_id?: string
+          id?: string
+          invite_code?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leagues_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      markets: {
+        Row: {
+          fixture_id: string
+          id: string
+          label: string
+          options: Json
+          points: number
+          type: string
+        }
+        Insert: {
+          fixture_id: string
+          id?: string
+          label: string
+          options?: Json
+          points?: number
+          type: string
+        }
+        Update: {
+          fixture_id?: string
+          id?: string
+          label?: string
+          options?: Json
+          points?: number
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "markets_fixture_id_fkey"
+            columns: ["fixture_id"]
+            isOneToOne: false
+            referencedRelation: "fixtures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      oracle_picks: {
+        Row: {
+          confidence: number
+          fixture_id: string
+          id: string
+          market_id: string
+          prediction: string
+          reasoning: string | null
+        }
+        Insert: {
+          confidence?: number
+          fixture_id: string
+          id?: string
+          market_id: string
+          prediction: string
+          reasoning?: string | null
+        }
+        Update: {
+          confidence?: number
+          fixture_id?: string
+          id?: string
+          market_id?: string
+          prediction?: string
+          reasoning?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oracle_picks_fixture_id_fkey"
+            columns: ["fixture_id"]
+            isOneToOne: false
+            referencedRelation: "fixtures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "oracle_picks_market_id_fkey"
+            columns: ["market_id"]
+            isOneToOne: true
+            referencedRelation: "markets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      predictions: {
+        Row: {
+          created_at: string
+          faded_oracle: boolean
+          fixture_id: string
+          id: string
+          market_id: string
+          pick: string
+          points_awarded: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          faded_oracle?: boolean
+          fixture_id: string
+          id?: string
+          market_id: string
+          pick: string
+          points_awarded?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          faded_oracle?: boolean
+          fixture_id?: string
+          id?: string
+          market_id?: string
+          pick?: string
+          points_awarded?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "predictions_fixture_id_fkey"
+            columns: ["fixture_id"]
+            isOneToOne: false
+            referencedRelation: "fixtures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "predictions_market_id_fkey"
+            columns: ["market_id"]
+            isOneToOne: false
+            referencedRelation: "markets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "predictions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          best_streak: number
+          created_at: string
+          current_streak: number
+          display_name: string
+          id: string
+          oracle_losses: number
+          oracle_wins: number
+          total_points: number
+        }
+        Insert: {
+          avatar_url?: string | null
+          best_streak?: number
+          created_at?: string
+          current_streak?: number
+          display_name: string
+          id: string
+          oracle_losses?: number
+          oracle_wins?: number
+          total_points?: number
+        }
+        Update: {
+          avatar_url?: string | null
+          best_streak?: number
+          created_at?: string
+          current_streak?: number
+          display_name?: string
+          id?: string
+          oracle_losses?: number
+          oracle_wins?: number
+          total_points?: number
+        }
+        Relationships: []
+      }
+      recaps: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          matchday: number
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          matchday: number
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          matchday?: number
+        }
+        Relationships: []
+      }
+      teams: {
+        Row: {
+          code: string
+          fifa_rank: number | null
+          flag_url: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          code: string
+          fifa_rank?: number | null
+          flag_url?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          code?: string
+          fifa_rank?: number | null
+          flag_url?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_league_member: {
+        Args: { _league_id: string; _user_id: string }
+        Returns: boolean
+      }
+      score_fixture: { Args: { _fixture_id: string }; Returns: undefined }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
+      fixture_status: "upcoming" | "locked" | "finished"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +508,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+      fixture_status: ["upcoming", "locked", "finished"],
+    },
   },
 } as const
