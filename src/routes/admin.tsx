@@ -82,7 +82,7 @@ function FinalizeForm({ fixtures, onDone }: { fixtures: any[]; onDone: () => voi
     if (error) { toast.error(error.message); return; }
     // call scoring via RPC — service role needed, so do via server-side direct SQL not possible from client
     // alternative: call a public RPC; we'll just run an update and rely on a separate trigger if needed
-    const { error: e2 } = await supabase.rpc("score_fixture", { _fixture_id: fid });
+    const { error: e2 } = await supabase.rpc("admin_score_fixture", { _fixture_id: fid });
     if (e2) toast.error("Saved goals but scoring failed: " + e2.message);
     else toast.success("Finalized + scored.");
     onDone();
