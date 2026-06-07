@@ -366,7 +366,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      admin_score_fixture: { Args: { _fixture_id: string }; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -378,7 +377,6 @@ export type Database = {
         Args: { _league_id: string; _user_id: string }
         Returns: boolean
       }
-      score_fixture: { Args: { _fixture_id: string }; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "user"
