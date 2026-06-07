@@ -367,6 +367,14 @@ export type Database = {
     }
     Functions: {
       admin_score_fixture: { Args: { _fixture_id: string }; Returns: undefined }
+      get_fixture_consensus: {
+        Args: { _fixture_id: string }
+        Returns: {
+          cnt: number
+          market_id: string
+          pick: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
