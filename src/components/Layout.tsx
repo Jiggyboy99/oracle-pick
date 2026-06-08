@@ -3,7 +3,7 @@ import { Home, Trophy, User, Users, Shield } from "lucide-react";
 import { useAuth, useIsAdmin } from "@/lib/useAuth";
 import type { ReactNode } from "react";
 
-export function Layout({ children }: { children: ReactNode }) {
+export function Layout({ children, fullWidth = false }: { children: ReactNode; fullWidth?: boolean }) {
   const { user } = useAuth();
   const isAdmin = useIsAdmin(user?.id);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -25,7 +25,7 @@ export function Layout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen pb-24">
-      <main className="max-w-2xl mx-auto px-4 pt-6">{children}</main>
+      <main className={fullWidth ? "" : "max-w-2xl mx-auto px-4 pt-6"}>{children}</main>
       <nav className="fixed bottom-3 left-1/2 -translate-x-1/2 glass rounded-2xl px-2 py-1 flex gap-1 z-40 shadow-2xl">
         <Item to="/" icon={Trophy} label="Board" />
         <Item to="/matches" icon={Home} label="Matches" />
