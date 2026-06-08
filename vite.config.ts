@@ -12,4 +12,11 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  // Force Nitro with the Vercel preset so `vite build` produces .vercel/output/
+  // which Vercel's Build Output API picks up natively (no catch-all rewrite needed).
+  // Without this, nitro is skipped outside the Lovable sandbox and Vercel gets
+  // a plain Vite client bundle with no SSR handler → 404 on every route.
+  nitro: {
+    preset: "vercel",
+  },
 });
