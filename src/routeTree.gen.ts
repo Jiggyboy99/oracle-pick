@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ProfileRouteImport } from './routes/profile'
-import { Route as PredictRouteImport } from './routes/predict'
 import { Route as MatchesRouteImport } from './routes/matches'
 import { Route as LeaguesRouteImport } from './routes/leagues'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -22,11 +21,6 @@ import { Route as LeaguesIdRouteImport } from './routes/leagues.$id'
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PredictRoute = PredictRouteImport.update({
-  id: '/predict',
-  path: '/predict',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MatchesRoute = MatchesRouteImport.update({
@@ -71,7 +65,6 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/leagues': typeof LeaguesRouteWithChildren
   '/matches': typeof MatchesRoute
-  '/predict': typeof PredictRoute
   '/profile': typeof ProfileRoute
   '/leagues/$id': typeof LeaguesIdRoute
   '/match/$id': typeof MatchIdRoute
@@ -82,7 +75,6 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/leagues': typeof LeaguesRouteWithChildren
   '/matches': typeof MatchesRoute
-  '/predict': typeof PredictRoute
   '/profile': typeof ProfileRoute
   '/leagues/$id': typeof LeaguesIdRoute
   '/match/$id': typeof MatchIdRoute
@@ -94,7 +86,6 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/leagues': typeof LeaguesRouteWithChildren
   '/matches': typeof MatchesRoute
-  '/predict': typeof PredictRoute
   '/profile': typeof ProfileRoute
   '/leagues/$id': typeof LeaguesIdRoute
   '/match/$id': typeof MatchIdRoute
@@ -107,7 +98,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/leagues'
     | '/matches'
-    | '/predict'
     | '/profile'
     | '/leagues/$id'
     | '/match/$id'
@@ -118,7 +108,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/leagues'
     | '/matches'
-    | '/predict'
     | '/profile'
     | '/leagues/$id'
     | '/match/$id'
@@ -129,7 +118,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/leagues'
     | '/matches'
-    | '/predict'
     | '/profile'
     | '/leagues/$id'
     | '/match/$id'
@@ -141,7 +129,6 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   LeaguesRoute: typeof LeaguesRouteWithChildren
   MatchesRoute: typeof MatchesRoute
-  PredictRoute: typeof PredictRoute
   ProfileRoute: typeof ProfileRoute
   MatchIdRoute: typeof MatchIdRoute
 }
@@ -153,13 +140,6 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/predict': {
-      id: '/predict'
-      path: '/predict'
-      fullPath: '/predict'
-      preLoaderRoute: typeof PredictRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/matches': {
@@ -231,10 +211,19 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   LeaguesRoute: LeaguesRouteWithChildren,
   MatchesRoute: MatchesRoute,
-  PredictRoute: PredictRoute,
   ProfileRoute: ProfileRoute,
   MatchIdRoute: MatchIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
