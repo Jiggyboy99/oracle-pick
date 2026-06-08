@@ -165,9 +165,15 @@
   to { width: 100%; }
 }
 
+@keyframes oracle-glow {
+  0%, 100% { box-shadow: 0 0 20px -5px rgba(123,97,255,0.25), 0 0 0 1px rgba(123,97,255,0.12); }
+  50% { box-shadow: 0 0 45px -5px rgba(123,97,255,0.45), 0 0 0 1px rgba(123,97,255,0.28); }
+}
+
 @utility anim-thunk { animation: thunk 350ms cubic-bezier(.34,1.56,.64,1); }
 @utility anim-glow { animation: pulse-glow 2.4s ease-in-out infinite; }
 @utility anim-flame { animation: flame-flicker 1.2s ease-in-out infinite; }
+@utility anim-oracle-glow { animation: oracle-glow 3.5s ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
