@@ -40,15 +40,16 @@
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
 
-  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
-  --font-sans: "Inter", system-ui, sans-serif;
+  --font-display: "Anton", "Archivo", system-ui, sans-serif;
+  --font-condensed: "Archivo", system-ui, sans-serif;
+  --font-sans: "Inter Tight", system-ui, sans-serif;
 }
 
 :root {
   --radius: 1.25rem;
 
   /* near-black canvas */
-  --background: oklch(0.12 0.012 280);
+  --background: #0A0A0F;
   --foreground: oklch(0.98 0 0);
 
   --surface: oklch(0.16 0.014 280);
@@ -93,7 +94,7 @@
   html { color-scheme: dark; }
   * { border-color: var(--color-border); }
   body {
-    background: radial-gradient(ellipse at top, oklch(0.18 0.04 290 / 0.5), transparent 60%), var(--color-background);
+    background: #0A0A0F;
     color: var(--color-foreground);
     font-family: var(--font-sans);
     min-height: 100vh;
@@ -101,8 +102,15 @@
   }
   h1, h2, h3, .display {
     font-family: var(--font-display);
-    letter-spacing: -0.04em;
-    font-weight: 700;
+    letter-spacing: -0.01em;
+    font-weight: 400;
+    text-transform: uppercase;
+  }
+  .num {
+    font-family: var(--font-condensed);
+    font-feature-settings: "tnum" 1;
+    font-weight: 800;
+    letter-spacing: -0.03em;
   }
 }
 
