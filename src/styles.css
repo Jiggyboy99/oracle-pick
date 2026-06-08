@@ -40,8 +40,9 @@
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
 
-  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
-  --font-sans: "Inter", system-ui, sans-serif;
+  --font-display: "Anton", "Archivo", system-ui, sans-serif;
+  --font-condensed: "Archivo", system-ui, sans-serif;
+  --font-sans: "Inter Tight", system-ui, sans-serif;
 }
 
 :root {
