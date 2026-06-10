@@ -15,36 +15,21 @@ import { StaggerGroup, StaggerItem } from "@/components/motion/Stagger";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Oracle — World Cup 2026 Predictions" },
+      { title: "CalledIt.gg — World Cup 2026 Predictions" },
       { name: "description", content: "Predict every match. Fade the Oracle. Climb the board." },
     ],
   }),
   component: Home,
 });
 
-// ---------- Placeholder data ----------
 type TeamLite = { code: string; name: string; flag: string };
-const flag = (cc: string) => `https://flagcdn.com/w160/${cc}.png`;
 
-const FALLBACK_NEXT = {
-  matchday: 3,
-  group: "Group F",
-  venue: "MetLife Stadium · East Rutherford",
-  kickoffAt: new Date(Date.now() + 1000 * 60 * 60 * 27 + 1000 * 60 * 14).toISOString(),
-  home: { code: "ARG", name: "Argentina", flag: flag("ar") } as TeamLite,
-  away: { code: "ESP", name: "Spain", flag: flag("es") } as TeamLite,
+type NextMatch = {
+  matchday: number;
+  kickoffAt: string;
+  home: TeamLite;
+  away: TeamLite;
 };
-
-const FALLBACK_BOARD: BoardRowData[] = [
-  { id: "1", name: "Mateo Rivas", country: "ar", points: 2480, delta: 2, streak: 6 },
-  { id: "oracle", name: "The Oracle", country: null, points: 2310, delta: 0, streak: 0, isOracle: true },
-  { id: "2", name: "Yuki Tanaka", country: "jp", points: 2185, delta: -1, streak: 3 },
-  { id: "3", name: "Amara Okonkwo", country: "ng", points: 2104, delta: 4, streak: 0 },
-  { id: "me", name: "You", country: "us", points: 1987, delta: 1, streak: 2, isMe: true },
-  { id: "4", name: "Lukas Müller", country: "de", points: 1902, delta: -3, streak: 0 },
-  { id: "5", name: "Sofia Marchetti", country: "it", points: 1844, delta: 0, streak: 1 },
-  { id: "6", name: "Hugo Laurent", country: "fr", points: 1780, delta: 2, streak: 0 },
-];
 
 function useCountdown(iso: string) {
   const [now, setNow] = useState(() => Date.now());
@@ -65,6 +50,8 @@ function Home() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [points, setPoints] = useState<number | null>(null);
+  const [nextMatch, setNextMatch] = useState<NextMatch | null>(null);
+  const [boardRows, setBoardRows] = useState<BoardRowData[] | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -76,11 +63,64 @@ function Home() {
       .then(({ data }) => setPoints(data?.total_points ?? 0));
   }, [user]);
 
-  const next = FALLBACK_NEXT;
-  const board = FALLBACK_BOARD;
-  const { d, h, m, s } = useCountdown(next.kickoffAt);
+  useEffect(() => {
+    supabase
+      .from("fixtures")
+      .select(
+        "id, matchday, kickoff_at, home:teams!fixtures_home_team_id_fkey(name,code,flag_url), away:teams!fixtures_away_team_id_fkey(name,code,flag_url)"
+      )
+      .in("status", ["upcoming", "locked"])
+      .order("kickoff_at", { ascending: true })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!data) return;
+        const h = data.home as { name: string; code: string; flag_url: string | null };
+        const a = data.away as { name: string; code: string; flag_url: string | null };
+        setNextMatch({
+          matchday: data.matchday,
+          kickoffAt: data.kickoff_at,
+          home: {
+            code: h.code,
+            name: h.name,
+            flag: h.flag_url ?? `https://flagcdn.com/w160/${h.code.toLowerCase()}.png`,
+          },
+          away: {
+            code: a.code,
+            name: a.name,
+            flag: a.flag_url ?? `https://flagcdn.com/w160/${a.code.toLowerCase()}.png`,
+          },
+        });
+      });
+
+    supabase
+      .from("profiles")
+      .select("id, display_name, total_points, current_streak")
+      .order("total_points", { ascending: false })
+      .limit(8)
+      .then(({ data }) => {
+        setBoardRows(
+          (data ?? []).map((p) => ({
+            id: p.id,
+            name: p.display_name,
+            country: null,
+            points: p.total_points,
+            delta: 0,
+            streak: p.current_streak,
+          }))
+        );
+      });
+  }, []);
+
+  const board = useMemo<BoardRowData[]>(() => {
+    if (!boardRows) return [];
+    return boardRows.map((row) => ({ ...row, isMe: row.id === user?.id }));
+  }, [boardRows, user]);
 
   const sorted = useMemo(() => [...board].sort((a, b) => b.points - a.points), [board]);
+  const { d, h, m, s } = useCountdown(
+    nextMatch?.kickoffAt ?? new Date(Date.now() + 86400000).toISOString()
+  );
 
   return (
     <PageTransition>
@@ -88,7 +128,7 @@ function Home() {
         {/* ============== HEADER ============== */}
         <header className="max-w-[1200px] mx-auto px-5 md:px-10 pt-6 md:pt-8 pb-4 flex items-center justify-between">
           <div className="flex items-baseline gap-3">
-            <span className="display text-3xl md:text-4xl leading-none">ORACLE</span>
+            <span className="display text-3xl md:text-4xl leading-none">CalledIt</span>
             <span className="hidden md:inline text-[10px] tracking-[0.3em] text-white/40 uppercase">
               World Cup · 2026
             </span>
@@ -98,7 +138,7 @@ function Home() {
               <div className="text-[10px] tracking-[0.25em] text-white/40 uppercase">Balance</div>
               <div className="mt-1">
                 <CountUp
-                  value={points ?? 1987}
+                  value={points ?? 0}
                   className="num text-2xl md:text-3xl text-white"
                 />
                 <span className="num text-2xl md:text-3xl text-acid"> pts</span>
@@ -143,23 +183,30 @@ function Home() {
                       <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-acid text-black text-[10px] font-bold tracking-[0.18em] uppercase">
                         <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" /> Next Match
                       </span>
-                      <span className="text-[10px] tracking-[0.25em] text-white/50 uppercase hidden sm:inline">
-                        MD {next.matchday} · {next.group}
-                      </span>
+                      {nextMatch && (
+                        <span className="text-[10px] tracking-[0.25em] text-white/50 uppercase hidden sm:inline">
+                          MD {nextMatch.matchday}
+                        </span>
+                      )}
                     </div>
-                    <span className="text-[10px] tracking-[0.25em] text-white/40 uppercase hidden md:inline">
-                      {next.venue}
-                    </span>
                   </div>
 
                   {/* teams */}
-                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 md:gap-8 my-6">
-                    <TeamBlock team={next.home} side="home" />
-                    <div className="flex flex-col items-center">
-                      <div className="num text-white/30 text-2xl md:text-3xl leading-none">VS</div>
+                  {nextMatch ? (
+                    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 md:gap-8 my-6">
+                      <TeamBlock team={nextMatch.home} side="home" />
+                      <div className="flex flex-col items-center">
+                        <div className="num text-white/30 text-2xl md:text-3xl leading-none">VS</div>
+                      </div>
+                      <TeamBlock team={nextMatch.away} side="away" />
                     </div>
-                    <TeamBlock team={next.away} side="away" />
-                  </div>
+                  ) : (
+                    <div className="flex items-center justify-center flex-1 my-6">
+                      <div className="text-white/30 text-sm tracking-[0.25em] uppercase animate-pulse">
+                        Loading fixture…
+                      </div>
+                    </div>
+                  )}
 
                   {/* countdown + cta */}
                   <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
@@ -285,15 +332,25 @@ function Home() {
                   </div>
                   <LayoutGroup id="home-board">
                     <ul>
-                      {sorted.map((row, idx) => (
-                        <BoardRow
-                          key={row.id}
-                          id={row.id}
-                          rank={idx + 1}
-                          data={row}
-                          index={idx}
-                        />
-                      ))}
+                      {boardRows === null ? (
+                        <li className="px-5 md:px-6 py-6 text-center text-white/30 text-sm tracking-[0.25em] uppercase animate-pulse">
+                          Loading…
+                        </li>
+                      ) : sorted.length === 0 ? (
+                        <li className="px-5 md:px-6 py-6 text-center text-white/30 text-sm tracking-[0.25em] uppercase">
+                          No players yet
+                        </li>
+                      ) : (
+                        sorted.map((row, idx) => (
+                          <BoardRow
+                            key={row.id}
+                            id={row.id}
+                            rank={idx + 1}
+                            data={row}
+                            index={idx}
+                          />
+                        ))
+                      )}
                     </ul>
                   </LayoutGroup>
                 </div>
