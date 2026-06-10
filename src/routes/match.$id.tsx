@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/useAuth";
 import { Layout } from "@/components/Layout";
 import { ConsensusBar } from "@/components/ConsensusBar";
 import { PredictionReceipt } from "@/components/PredictionReceipt";
+import { ShareCard } from "@/components/ShareCard";
 import { Confetti } from "@/components/Confetti";
 import { PitchLines } from "@/components/PitchLines";
 import { ArrowLeft, Check, Download, Lock, Sparkles } from "lucide-react";
@@ -165,7 +166,7 @@ function MatchPage() {
         >
           <ArrowLeft size={14} /> Matches
         </button>
-        <span className="display text-2xl md:text-3xl leading-none">ORACLE</span>
+        <span className="display text-2xl md:text-3xl leading-none">CalledIt</span>
       </header>
 
       {/* ── 12-col editorial grid ── */}
@@ -507,6 +508,23 @@ function MatchPage() {
             >
               <Download size={16} /> Save image
             </button>
+            <ShareCard
+              homeCode={fixture.home.code}
+              awayCode={fixture.away.code}
+              home={fixture.home.name}
+              away={fixture.away.name}
+              picks={markets
+                .filter((mk) => picks[mk.id])
+                .map((mk) => {
+                  const opts: any[] = mk.options;
+                  const label = opts.find((o) => o.value === picks[mk.id])?.label ?? picks[mk.id];
+                  return {
+                    market: mk.label,
+                    pick: label,
+                    faded: !!(oraclePicks[mk.id] && oraclePicks[mk.id].prediction !== picks[mk.id]),
+                  };
+                })}
+            />
           </div>
         )}
       </main>

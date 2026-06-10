@@ -319,6 +319,33 @@ export type Database = {
         }
         Relationships: []
       }
+      sponsors: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          logo_url: string
+          name: string
+          website_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          logo_url: string
+          name: string
+          website_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          logo_url?: string
+          name?: string
+          website_url?: string | null
+        }
+        Relationships: []
+      }
       teams: {
         Row: {
           code: string
@@ -376,6 +403,10 @@ export type Database = {
       is_league_member: {
         Args: { _league_id: string; _user_id: string }
         Returns: boolean
+      }
+      normalize_player_name: {
+        Args: { name: string }
+        Returns: string
       }
     }
     Enums: {
