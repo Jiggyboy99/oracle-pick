@@ -144,12 +144,12 @@ function Home() {
                 <span className="num text-2xl md:text-3xl text-acid"> pts</span>
               </div>
             </div>
-            <button
-              onClick={() => (user ? navigate({ to: "/profile" }) : navigate({ to: "/auth" }))}
+            <Link
+              to={user ? "/profile" : "/auth"}
               className="w-11 h-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-sm font-semibold hover:bg-white/10 transition"
             >
               {(user?.email?.[0] ?? "U").toUpperCase()}
-            </button>
+            </Link>
           </div>
         </header>
 
