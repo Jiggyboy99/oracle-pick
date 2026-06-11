@@ -12,11 +12,12 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -28,6 +29,14 @@ function AuthPage() {
     e.preventDefault();
     setLoading(true);
     try {
+      if (mode === "forgot") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+        setResetSent(true);
+        return;
+      }
       if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
           email,
@@ -78,47 +87,83 @@ function AuthPage() {
           Continue with Google
         </button>
         <div className="text-center text-xs text-muted-foreground mb-4">or</div>
-        <form onSubmit={submit} className="space-y-3">
-          {mode === "signup" && (
+        {mode === "forgot" && resetSent ? (
+          <div className="text-center space-y-4 py-2">
+            <p className="text-sm text-foreground">
+              Reset link sent to <span className="text-acid font-semibold">{email}</span>.
+            </p>
+            <p className="text-xs text-muted-foreground">Check your inbox and click the link to set a new password.</p>
+            <button
+              onClick={() => { setMode("signin"); setResetSent(false); }}
+              className="w-full mt-2 text-sm text-muted-foreground hover:text-foreground"
+            >
+              Back to sign in
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={submit} className="space-y-3">
+            {mode === "signup" && (
+              <input
+                type="text"
+                placeholder="Display name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl bg-secondary border border-border focus:border-acid outline-none"
+              />
+            )}
             <input
-              type="text"
-              placeholder="Display name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
               className="w-full px-4 py-3 rounded-xl bg-secondary border border-border focus:border-acid outline-none"
             />
-          )}
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full px-4 py-3 rounded-xl bg-secondary border border-border focus:border-acid outline-none"
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={6}
-            className="w-full px-4 py-3 rounded-xl bg-secondary border border-border focus:border-acid outline-none"
-          />
+            {mode !== "forgot" && (
+              <div className="space-y-1">
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="w-full px-4 py-3 rounded-xl bg-secondary border border-border focus:border-acid outline-none"
+                />
+                {mode === "signin" && (
+                  <div className="text-right">
+                    <button
+                      type="button"
+                      onClick={() => setMode("forgot")}
+                      className="text-xs text-muted-foreground hover:text-acid transition-colors"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 rounded-xl bg-acid text-acid-foreground font-bold active:scale-[0.97] transition-transform"
+            >
+              {loading ? "..." : mode === "signin" ? "Sign in" : mode === "signup" ? "Create account" : "Send reset link"}
+            </button>
+          </form>
+        )}
+        {!resetSent && (
           <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 rounded-xl bg-acid text-acid-foreground font-bold active:scale-[0.97] transition-transform"
+            onClick={() => setMode(mode === "signup" ? "signin" : mode === "forgot" ? "signin" : "signup")}
+            className="w-full mt-4 text-sm text-muted-foreground hover:text-foreground"
           >
-            {loading ? "..." : mode === "signin" ? "Sign in" : "Create account"}
+            {mode === "signup"
+              ? "Have an account? Sign in"
+              : mode === "forgot"
+              ? "Back to sign in"
+              : "New here? Create an account"}
           </button>
-        </form>
-        <button
-          onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-          className="w-full mt-4 text-sm text-muted-foreground hover:text-foreground"
-        >
-          {mode === "signin" ? "New here? Create an account" : "Have an account? Sign in"}
-        </button>
+        )}
       </div>
     </div>
   );
