@@ -1,7 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-export const ADMIN_EMAILS = ["akinloyetobi13@gmail.com", "emkaykudaisi@gmail.com"];
+export const ADMIN_EMAILS = [
+  "akinloyetobi13@gmail.com",
+  "akinloyetobi13+eye@gmail.com",
+  "emkaykudaisi@gmail.com",
+];
 
 function parseScore(s: string): { home: number; away: number } | null {
   const m = s.match(/^(\d+)[-:](\d+)$/);
@@ -28,7 +32,7 @@ export const finalizeFixture = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }) => {
     const email = ((context.claims as any)?.email ?? "").toLowerCase();
-    if (!ADMIN_EMAILS.includes(email)) throw new Error("Not authorized");
+    if (!ADMIN_EMAILS.some(e => e.toLowerCase() === email)) throw new Error("Not authorized");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { fixtureId, homeGoals, awayGoals, marketResults } = data;
