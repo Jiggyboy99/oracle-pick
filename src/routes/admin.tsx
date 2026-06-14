@@ -117,7 +117,7 @@ function StatusBadge({ status }: { status: string }) {
 // ────────────────────────────────────────────────
 // Custom tab bar
 // ────────────────────────────────────────────────
-const TABS = ["fixtures", "markets", "oracle", "results", "recaps"] as const;
+const TABS = ["fixtures", "markets", "oracle", "results", "recaps", "sponsors"] as const;
 type Tab = typeof TABS[number];
 
 function TabBar({ active, set }: { active: Tab; set: (t: Tab) => void }) {
@@ -225,6 +225,7 @@ function AdminPage() {
         {tab === "oracle" && <OracleTab fixtures={fixtures} markets={markets} />}
         {tab === "results" && <ResultsTab fixtures={fixtures} markets={markets} onDone={reload} />}
         {tab === "recaps" && <RecapsTab />}
+        {tab === "sponsors" && <SponsorsTab />}
       </PageTransition>
     </Layout>
   );
@@ -945,6 +946,145 @@ function ResultsTab({ fixtures, markets, onDone }: { fixtures: Fixture[]; market
           </div>
         </StaggerItem>
       )}
+    </StaggerGroup>
+  );
+}
+
+// ════════════════════════════════════════════════
+// SPONSORS tab
+// ════════════════════════════════════════════════
+type Sponsor = {
+  id: string;
+  name: string;
+  logo_url: string;
+  website_url: string | null;
+  display_order: number;
+};
+
+function SponsorsTab() {
+  const [sponsors, setSponsors] = useState<Sponsor[]>([]);
+  const [name, setName] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [displayOrder, setDisplayOrder] = useState("0");
+  const [editId, setEditId] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function load() {
+    const { data } = await supabase.from("sponsors").select("*").order("display_order");
+    setSponsors((data ?? []) as Sponsor[]);
+  }
+  useEffect(() => { load(); }, []);
+
+  function startEdit(s: Sponsor) {
+    setEditId(s.id);
+    setName(s.name);
+    setLogoUrl(s.logo_url);
+    setWebsiteUrl(s.website_url ?? "");
+    setDisplayOrder(String(s.display_order));
+  }
+
+  function cancelEdit() {
+    setEditId(null);
+    setName(""); setLogoUrl(""); setWebsiteUrl(""); setDisplayOrder("0");
+  }
+
+  async function save() {
+    if (!name || !logoUrl) return toast.error("Name and logo URL are required");
+    setBusy(true);
+    const payload = {
+      name: name.trim(),
+      logo_url: logoUrl.trim(),
+      website_url: websiteUrl.trim() || null,
+      display_order: Number(displayOrder),
+    };
+    const { error } = editId
+      ? await supabase.from("sponsors").update(payload).eq("id", editId)
+      : await supabase.from("sponsors").insert(payload);
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success(editId ? "Sponsor updated" : "Sponsor added");
+    cancelEdit();
+    load();
+  }
+
+  async function del(id: string) {
+    const { error } = await supabase.from("sponsors").delete().eq("id", id);
+    if (error) toast.error(error.message); else { toast.success("Deleted"); load(); }
+  }
+
+  return (
+    <StaggerGroup>
+      <StaggerItem index={0}>
+        <div className="card-bento p-5 space-y-4">
+          <h2 className="display text-2xl text-acid">{editId ? "Edit Sponsor" : "Add Sponsor"}</h2>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Name</label>
+              <input value={name} onChange={e => setName(e.target.value)} placeholder="Acme Corp" className={inp} />
+            </div>
+            <div>
+              <label className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Display Order</label>
+              <input type="number" min={0} value={displayOrder} onChange={e => setDisplayOrder(e.target.value)} className={inp} />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Logo URL</label>
+            <input value={logoUrl} onChange={e => setLogoUrl(e.target.value)} placeholder="https://…/logo.png" className={inp} />
+            {logoUrl && (
+              <img src={logoUrl} alt="preview" className="mt-2 h-8 object-contain rounded border border-border" />
+            )}
+          </div>
+
+          <div>
+            <label className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Website URL (optional)</label>
+            <input value={websiteUrl} onChange={e => setWebsiteUrl(e.target.value)} placeholder="https://acme.com" className={inp} />
+          </div>
+
+          <div className="flex gap-2">
+            <button onClick={save} disabled={busy} className={btnAcid}>
+              {busy ? "Saving…" : editId ? "Update Sponsor" : "+ Add Sponsor"}
+            </button>
+            {editId && (
+              <button onClick={cancelEdit} className="px-4 py-2.5 rounded-xl border border-border text-sm font-semibold active:scale-95">
+                Cancel
+              </button>
+            )}
+          </div>
+        </div>
+      </StaggerItem>
+
+      <StaggerItem index={1} className="mt-4">
+        <div className="card-bento overflow-hidden">
+          <div className="px-5 py-4 border-b border-border">
+            <h2 className="display text-2xl text-acid">Sponsors</h2>
+          </div>
+          {sponsors.length === 0 ? (
+            <p className="px-5 py-6 text-muted-foreground text-sm text-center">No sponsors yet.</p>
+          ) : (
+            <div className="divide-y divide-border">
+              {sponsors.map(s => (
+                <div key={s.id} className="px-5 py-3 flex items-center gap-3">
+                  <img src={s.logo_url} alt={s.name} className="h-8 w-16 object-contain rounded border border-border flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm">{s.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      Order {s.display_order}
+                      {s.website_url && <> · <a href={s.website_url} target="_blank" rel="noopener noreferrer" className="text-acid/70 hover:text-acid">↗ site</a></>}
+                    </div>
+                  </div>
+                  <div className="flex gap-1.5 flex-shrink-0">
+                    <button onClick={() => startEdit(s)} className={btnGhost}>Edit</button>
+                    <button onClick={() => del(s.id)} className={btnDanger}>Delete</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </StaggerItem>
     </StaggerGroup>
   );
 }

@@ -1,10 +1,10 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/useAuth";
 import { Layout } from "@/components/Layout";
 import { StreakFlame } from "@/components/StreakFlame";
-import { LogOut, Sparkles } from "lucide-react";
+import { ChevronRight, LogOut, Sparkles, Users } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/profile")({
@@ -18,6 +18,7 @@ function ProfilePage() {
   const [profile, setProfile] = useState<any>(null);
   const [rank, setRank] = useState<number | null>(null);
   const [history, setHistory] = useState<any[]>([]);
+  const [myLeagues, setMyLeagues] = useState<any[]>([]);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState("");
 
@@ -41,6 +42,12 @@ function ProfilePage() {
         .order("created_at", { ascending: false })
         .limit(20);
       setHistory(hist ?? []);
+
+      const { data: mem } = await supabase
+        .from("league_members")
+        .select("leagues(id, name, invite_code)")
+        .eq("user_id", user.id);
+      setMyLeagues((mem ?? []).map((m: any) => m.leagues).filter(Boolean));
     })();
   }, [user]);
 
@@ -118,6 +125,36 @@ function ProfilePage() {
           </div>
         ))}
       </div>
+
+      {/* My Leagues */}
+      <h2 className="text-xl mt-8 mb-3">My Leagues</h2>
+      {myLeagues.length === 0 ? (
+        <Link to="/leagues" className="card-bento p-4 flex items-center gap-3 text-sm text-muted-foreground active:scale-[0.98] transition-transform">
+          <Users size={16} className="text-acid" />
+          <span>No leagues yet — create or join one</span>
+          <ChevronRight size={14} className="ml-auto text-acid" />
+        </Link>
+      ) : (
+        <div className="space-y-2">
+          {myLeagues.map((l) => (
+            <Link
+              key={l.id}
+              to="/leagues/$id"
+              params={{ id: l.id }}
+              className="card-bento p-4 flex items-center gap-3 active:scale-[0.98] transition-transform"
+            >
+              <div className="w-9 h-9 rounded-xl bg-acid/10 border border-acid/20 flex items-center justify-center flex-shrink-0">
+                <Users size={14} className="text-acid" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-bold text-sm truncate">{l.name}</div>
+                <div className="text-xs text-muted-foreground font-mono">{l.invite_code}</div>
+              </div>
+              <ChevronRight size={14} className="text-acid flex-shrink-0" />
+            </Link>
+          ))}
+        </div>
+      )}
 
       <button onClick={signOut} className="mt-8 w-full py-3 rounded-xl bg-secondary border border-border text-muted-foreground flex items-center justify-center gap-2 active:scale-[0.97]">
         <LogOut size={16} /> Sign out

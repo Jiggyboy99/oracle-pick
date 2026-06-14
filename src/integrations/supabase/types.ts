@@ -104,21 +104,27 @@ export type Database = {
           creator_id: string
           id: string
           invite_code: string
+          join_type: string
           name: string
+          show_past_results: boolean
         }
         Insert: {
           created_at?: string
           creator_id: string
           id?: string
           invite_code: string
+          join_type?: string
           name: string
+          show_past_results?: boolean
         }
         Update: {
           created_at?: string
           creator_id?: string
           id?: string
           invite_code?: string
+          join_type?: string
           name?: string
+          show_past_results?: boolean
         }
         Relationships: [
           {
