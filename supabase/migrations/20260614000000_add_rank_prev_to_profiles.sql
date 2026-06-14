@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS rank_prev INT NOT NULL DEFAULT 0;

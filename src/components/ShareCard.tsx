@@ -10,9 +10,11 @@ interface ShareCardProps {
   home: string;
   away: string;
   picks: ReceiptPick[];
+  variant?: "default" | "called-it";
+  calledScore?: string;
 }
 
-export function ShareCard({ homeCode, awayCode, home, away, picks }: ShareCardProps) {
+export function ShareCard({ homeCode, awayCode, home, away, picks, variant = "default", calledScore }: ShareCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [imgUrl, setImgUrl] = useState<string | null>(null);
   const [generating, setGenerating] = useState(true);
@@ -33,7 +35,9 @@ export function ShareCard({ homeCode, awayCode, home, away, picks }: ShareCardPr
     .slice(0, 4)
     .map((p) => `• ${p.market}: ${p.pick}`)
     .join("\n");
-  const shareText = `I called ${homeCode} vs ${awayCode} on CalledIt.gg 🎯\n\n${picksLines}\n\nThink you know better?`;
+  const shareText = variant === "called-it" && calledScore
+    ? `I CALLED IT 👁️ ${homeCode} vs ${awayCode} — exact score ${calledScore} 🎯\n\n${picksLines}\n\nBeat the Oracle at The Eye:`
+    : `I called ${homeCode} vs ${awayCode} 🎯\n\n${picksLines}\n\nThink you know better?`;
 
   function openTwitter() {
     window.open(
@@ -67,6 +71,8 @@ export function ShareCard({ homeCode, awayCode, home, away, picks }: ShareCardPr
           home={home}
           away={away}
           picks={picks}
+          variant={variant}
+          calledScore={calledScore}
         />
       </div>
 
@@ -122,9 +128,10 @@ export function ShareCard({ homeCode, awayCode, home, away, picks }: ShareCardPr
 type CardImageProps = Omit<ShareCardProps, never>;
 
 const CardImage = forwardRef<HTMLDivElement, CardImageProps>(function CardImage(
-  { homeCode, awayCode, home, away, picks },
+  { homeCode, awayCode, home, away, picks, variant = "default", calledScore },
   ref
 ) {
+  const isCalledIt = variant === "called-it";
   return (
     <div
       ref={ref}
@@ -144,25 +151,31 @@ const CardImage = forwardRef<HTMLDivElement, CardImageProps>(function CardImage(
         style={{
           position: "absolute",
           inset: 0,
-          background:
-            "radial-gradient(circle at 10% 15%, rgba(123,97,255,0.22), transparent 45%), " +
-            "radial-gradient(circle at 88% 82%, rgba(57,231,95,0.13), transparent 42%)",
+          background: isCalledIt
+            ? "radial-gradient(circle at 10% 15%, rgba(57,231,95,0.28), transparent 45%), radial-gradient(circle at 88% 82%, rgba(57,231,95,0.14), transparent 42%)"
+            : "radial-gradient(circle at 10% 15%, rgba(123,97,255,0.22), transparent 45%), radial-gradient(circle at 88% 82%, rgba(57,231,95,0.13), transparent 42%)",
         }}
       />
 
-      {/* Branding */}
+      {/* Branding / headline */}
       <div
         style={{
           position: "relative",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          marginBottom: 32,
+          marginBottom: isCalledIt ? 20 : 32,
         }}
       >
-        <div style={{ fontSize: 21, fontWeight: 900, letterSpacing: "-0.03em", color: "white" }}>
-          CalledIt.gg
-        </div>
+        {isCalledIt ? (
+          <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: "0.01em", color: "#39E75F" }}>
+            I CALLED IT 👁️
+          </div>
+        ) : (
+          <div style={{ fontSize: 21, fontWeight: 900, letterSpacing: "-0.03em", color: "white" }}>
+            The Eye
+          </div>
+        )}
         <div
           style={{
             fontSize: 9,
@@ -174,6 +187,25 @@ const CardImage = forwardRef<HTMLDivElement, CardImageProps>(function CardImage(
           World Cup · 2026
         </div>
       </div>
+
+      {/* Called-it score display */}
+      {isCalledIt && calledScore && (
+        <div
+          style={{
+            position: "relative",
+            textAlign: "center",
+            marginBottom: 24,
+            padding: "16px 0",
+          }}
+        >
+          <div style={{ fontSize: 80, fontWeight: 900, color: "#39E75F", lineHeight: 1, letterSpacing: "-0.04em" }}>
+            {calledScore}
+          </div>
+          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", letterSpacing: "0.3em", textTransform: "uppercase", marginTop: 6 }}>
+            Exact Score · Perfect Call
+          </div>
+        </div>
+      )}
 
       {/* Match */}
       <div
@@ -291,7 +323,7 @@ const CardImage = forwardRef<HTMLDivElement, CardImageProps>(function CardImage(
         }}
       >
         <span style={{ fontSize: 13, fontWeight: 700, color: "#0A0A0F", letterSpacing: "0.02em" }}>
-          Think you know better? calledit.gg
+          {isCalledIt ? "Can you beat the Oracle? · The Eye" : "Think you know better? · The Eye"}
         </span>
       </div>
     </div>

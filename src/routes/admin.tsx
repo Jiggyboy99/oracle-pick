@@ -17,7 +17,7 @@ export const Route = createFileRoute("/admin")({
 // ────────────────────────────────────────────────
 // Domain types
 // ────────────────────────────────────────────────
-type Team = { id: string; name: string; code: string };
+type Team = { id: string; name: string; code: string; flag_url: string | null; fifa_rank: number | null };
 type Fixture = {
   id: string;
   matchday: number;
@@ -159,7 +159,7 @@ function AdminPage() {
 
   const reload = useCallback(async () => {
     const [{ data: ts }, { data: fxs }, { data: mks }] = await Promise.all([
-      supabase.from("teams").select("id,name,code").order("name"),
+      supabase.from("teams").select("id,name,code,flag_url,fifa_rank").order("name"),
       supabase
         .from("fixtures")
         .select(
@@ -237,12 +237,135 @@ function FixturesTab({ fixtures, teams, onDone }: { fixtures: Fixture[]; teams: 
   return (
     <StaggerGroup>
       <StaggerItem index={0}>
-        <AddFixtureForm teams={teams} onDone={onDone} />
+        <TeamSection teams={teams} onDone={onDone} />
       </StaggerItem>
       <StaggerItem index={1} className="mt-4">
+        <AddFixtureForm teams={teams} onDone={onDone} />
+      </StaggerItem>
+      <StaggerItem index={2} className="mt-4">
         <FixtureList fixtures={fixtures} onDone={onDone} />
       </StaggerItem>
     </StaggerGroup>
+  );
+}
+
+function TeamSection({ teams, onDone }: { teams: Team[]; onDone: () => void }) {
+  const [name, setName] = useState("");
+  const [code, setCode] = useState("");
+  const [flagUrl, setFlagUrl] = useState("");
+  const [fifaRank, setFifaRank] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  async function submit() {
+    if (!name || !code) return toast.error("Name and code are required");
+    if (code.length !== 3) return toast.error("Code must be exactly 3 letters");
+    setBusy(true);
+    const { error } = await supabase.from("teams").insert({
+      name: name.trim(),
+      code: code.toUpperCase().trim(),
+      flag_url: flagUrl.trim() || null,
+      fifa_rank: fifaRank ? Number(fifaRank) : null,
+    });
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    toast.success("Team added");
+    setName(""); setCode(""); setFlagUrl(""); setFifaRank("");
+    onDone();
+  }
+
+  async function del(id: string) {
+    const { error } = await supabase.from("teams").delete().eq("id", id);
+    if (error) toast.error(error.message); else { toast.success("Team deleted"); onDone(); }
+  }
+
+  return (
+    <div className="card-bento overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full px-5 py-4 flex items-center justify-between border-b border-border"
+      >
+        <h2 className="display text-2xl text-acid">Teams ({teams.length})</h2>
+        <span className={`text-xs font-bold uppercase tracking-wider text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}>
+          {open ? "▲" : "▼"}
+        </span>
+      </button>
+
+      {open && (
+        <>
+          {/* add form */}
+          <div className="p-5 space-y-3 border-b border-border">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Name</label>
+                <input placeholder="Brazil" value={name} onChange={e => setName(e.target.value)} className={inp} />
+              </div>
+              <div>
+                <label className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Code (3-letter)</label>
+                <input
+                  placeholder="BRA"
+                  maxLength={3}
+                  value={code}
+                  onChange={e => setCode(e.target.value.toUpperCase())}
+                  className={`${inp} uppercase`}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1.5 block">
+                Flag URL <span className="normal-case text-muted-foreground/60">(hint: https://flagcdn.com/w160/br.png)</span>
+              </label>
+              <input
+                placeholder="https://flagcdn.com/w160/br.png"
+                value={flagUrl}
+                onChange={e => setFlagUrl(e.target.value)}
+                className={inp}
+              />
+            </div>
+            <div>
+              <label className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1.5 block">FIFA Rank</label>
+              <input
+                type="number"
+                min={1}
+                placeholder="5"
+                value={fifaRank}
+                onChange={e => setFifaRank(e.target.value)}
+                className={inp}
+              />
+            </div>
+            <button onClick={submit} disabled={busy} className={btnAcid}>
+              {busy ? "Adding…" : "+ Add Team"}
+            </button>
+          </div>
+
+          {/* team list */}
+          {teams.length === 0 ? (
+            <p className="px-5 py-6 text-muted-foreground text-sm text-center">No teams yet.</p>
+          ) : (
+            <div className="divide-y divide-border">
+              {teams.map(t => (
+                <div key={t.id} className="px-5 py-3 flex items-center gap-3">
+                  {t.flag_url ? (
+                    <img src={t.flag_url} alt="" className="w-10 h-7 object-cover rounded border border-border flex-shrink-0" />
+                  ) : (
+                    <div className="w-10 h-7 rounded bg-secondary border border-border flex-shrink-0 flex items-center justify-center text-[9px] text-muted-foreground font-bold">
+                      {t.code}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm">{t.code} — {t.name}</div>
+                    {t.fifa_rank && (
+                      <div className="text-xs text-muted-foreground">FIFA #{t.fifa_rank}</div>
+                    )}
+                  </div>
+                  <button onClick={() => del(t.id)} className={btnDanger}>Delete</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
   );
 }
 
@@ -412,6 +535,7 @@ function AddMarketForm({ fixtureId, onDone }: { fixtureId: string; onDone: () =>
       return scoreLines.split("\n").map(s => s.trim()).filter(Boolean).map(s => ({ label: s, value: s }));
     }
     if (PRESETS[type]) return PRESETS[type].options;
+    // first_scorer and custom both take a JSON array
     try { return JSON.parse(customJSON); } catch { return null; }
   }
 
@@ -443,6 +567,7 @@ function AddMarketForm({ fixtureId, onDone }: { fixtureId: string; onDone: () =>
             <option value="over_under">Over/Under 2.5</option>
             <option value="exact_score">Exact Score</option>
             <option value="scoreline">Scoreline</option>
+            <option value="first_scorer">First Scorer</option>
             <option value="custom">Custom</option>
           </select>
         </div>
@@ -463,10 +588,10 @@ function AddMarketForm({ fixtureId, onDone }: { fixtureId: string; onDone: () =>
           <textarea value={scoreLines} onChange={e => setScoreLines(e.target.value)} className={inp} rows={7} />
         </div>
       )}
-      {type === "custom" && (
+      {(type === "custom" || type === "first_scorer") && (
         <div>
           <label className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1.5 block">
-            Options (JSON array)
+            {type === "first_scorer" ? 'Players (JSON — e.g. [{"label":"Mbappé","value":"mbappe"}])' : "Options (JSON array)"}
           </label>
           <textarea value={customJSON} onChange={e => setCustomJSON(e.target.value)} className={`${inp} font-mono text-xs`} rows={4} />
         </div>

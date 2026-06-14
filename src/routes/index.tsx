@@ -95,17 +95,17 @@ function Home() {
 
     supabase
       .from("profiles")
-      .select("id, display_name, total_points, current_streak")
+      .select("id, display_name, total_points, current_streak, rank_prev")
       .order("total_points", { ascending: false })
       .limit(8)
       .then(({ data }) => {
         setBoardRows(
-          (data ?? []).map((p) => ({
+          (data ?? []).map((p, idx) => ({
             id: p.id,
             name: p.display_name,
             country: null,
             points: p.total_points,
-            delta: 0,
+            delta: p.rank_prev > 0 ? p.rank_prev - (idx + 1) : 0,
             streak: p.current_streak,
           }))
         );

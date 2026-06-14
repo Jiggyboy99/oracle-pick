@@ -51,6 +51,22 @@ export const finalizeFixture = createServerFn({ method: "POST" })
 
     if (!preds?.length) return { ok: true, scored: 0 };
 
+    // Snapshot pre-scoring ranks so the leaderboard can show movement
+    const { data: allForRank } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .order("total_points", { ascending: false });
+    const rankMap: Record<string, number> = {};
+    (allForRank ?? []).forEach((p, idx) => { rankMap[p.id] = idx + 1; });
+    const affectedEarly = [...new Set(preds.map(p => p.user_id))];
+    await Promise.all(
+      affectedEarly.map(uid =>
+        supabaseAdmin.from("profiles")
+          .update({ rank_prev: rankMap[uid] ?? 0 })
+          .eq("id", uid)
+      )
+    );
+
     const mktMap: Record<string, { points: number; type: string }> = {};
     (markets ?? []).forEach(m => { mktMap[m.id] = { points: m.points, type: m.type }; });
 

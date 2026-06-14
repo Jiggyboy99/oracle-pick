@@ -272,6 +272,7 @@ export type Database = {
           id: string
           oracle_losses: number
           oracle_wins: number
+          rank_prev: number
           total_points: number
         }
         Insert: {
@@ -283,6 +284,7 @@ export type Database = {
           id: string
           oracle_losses?: number
           oracle_wins?: number
+          rank_prev?: number
           total_points?: number
         }
         Update: {
@@ -294,6 +296,7 @@ export type Database = {
           id?: string
           oracle_losses?: number
           oracle_wins?: number
+          rank_prev?: number
           total_points?: number
         }
         Relationships: []

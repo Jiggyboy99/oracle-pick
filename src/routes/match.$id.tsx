@@ -47,6 +47,7 @@ function MatchPage() {
   const [confettiTrigger, setConfettiTrigger] = useState(0);
   const [thunkKey, setThunkKey] = useState(0);
   const receiptRef = useRef<HTMLDivElement>(null);
+  const calledItFiredRef = useRef(false);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth" });
@@ -98,6 +99,22 @@ function MatchPage() {
 
   const locked = fixture && (new Date(fixture.kickoff_at) < new Date() || fixture.status !== "upcoming");
   const selectedCount = Object.keys(picks).length;
+
+  // "I CALLED IT" — exact score market where the user's pick matches the final score
+  const calledScore =
+    fixture?.status === "finished" && fixture.home_goals != null && fixture.away_goals != null
+      ? `${fixture.home_goals}-${fixture.away_goals}`
+      : null;
+  const calledIt =
+    calledScore != null &&
+    markets.some((mk) => mk.type === "exact_score" && picks[mk.id] === calledScore);
+
+  useEffect(() => {
+    if (calledIt && !calledItFiredRef.current) {
+      calledItFiredRef.current = true;
+      setConfettiTrigger((c) => c + 1);
+    }
+  }, [calledIt]);
 
   const potential = useMemo(
     () => markets.reduce((sum, m) => (picks[m.id] ? sum + m.points : sum), 0),
@@ -341,6 +358,11 @@ function MatchPage() {
                     {opts.map((o) => {
                       const active = userPick === o.value;
                       const isOracle = oraclePick?.prediction === o.value;
+                      const isExactWin =
+                        calledScore != null &&
+                        mk.type === "exact_score" &&
+                        o.value === calledScore &&
+                        active;
                       return (
                         <motion.button
                           key={o.value}
@@ -351,17 +373,23 @@ function MatchPage() {
                           className={[
                             "relative px-3 py-3.5 rounded-2xl border text-left transition-colors",
                             "flex flex-col items-start justify-center min-h-[64px]",
-                            active
+                            isExactWin
+                              ? "bg-acid border-acid text-acid-foreground ring-2 ring-acid/60 ring-offset-2 ring-offset-[#0F0F16]"
+                              : active
                               ? "bg-acid border-acid text-acid-foreground"
                               : "bg-white/[0.03] border-white/10 hover:border-white/25 hover:bg-white/[0.06] text-white",
                             locked && !active ? "opacity-40" : "",
                           ].join(" ")}
                         >
-                          {active && (
+                          {isExactWin ? (
+                            <span className="absolute top-2 right-2 flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/30 text-[9px] font-black tracking-wider uppercase">
+                              EXACT
+                            </span>
+                          ) : active ? (
                             <span className="absolute top-2 right-2">
                               <Check size={14} strokeWidth={3} />
                             </span>
-                          )}
+                          ) : null}
                           {isOracle && !active && (
                             <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-oracle" />
                           )}
@@ -490,6 +518,8 @@ function MatchPage() {
               homeCode={fixture.home.code}
               awayCode={fixture.away.code}
               potential={potential}
+              variant={calledIt ? "called-it" : "default"}
+              calledScore={calledScore ?? undefined}
               picks={markets
                 .filter((mk) => picks[mk.id])
                 .map((mk) => {
@@ -499,6 +529,7 @@ function MatchPage() {
                     market: mk.label,
                     pick: label,
                     faded: !!(oraclePicks[mk.id] && oraclePicks[mk.id].prediction !== picks[mk.id]),
+                    correct: calledScore != null && mk.type === "exact_score" && picks[mk.id] === calledScore,
                   };
                 })}
             />
@@ -513,6 +544,8 @@ function MatchPage() {
               awayCode={fixture.away.code}
               home={fixture.home.name}
               away={fixture.away.name}
+              variant={calledIt ? "called-it" : "default"}
+              calledScore={calledScore ?? undefined}
               picks={markets
                 .filter((mk) => picks[mk.id])
                 .map((mk) => {
