@@ -7,7 +7,7 @@ import { PageTransition } from "@/components/motion/PageTransition";
 import { StaggerGroup, StaggerItem } from "@/components/motion/Stagger";
 import { finalizeFixture } from "@/lib/admin.functions";
 import { toast } from "sonner";
-import { CheckCircle, Clock, Lock, Zap } from "lucide-react";
+import { CheckCircle, Clock, Lock, RefreshCw, Zap } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Command — The Eye" }] }),
@@ -181,6 +181,20 @@ function AdminPage() {
     if (isAdmin) reload();
   }, [isAdmin, reload]);
 
+  // Data can change out-of-band (direct SQL/dashboard edits), so refetch
+  // whenever the admin tab regains focus instead of requiring a hard reload.
+  useEffect(() => {
+    if (!isAdmin) return;
+    function onFocus() { reload(); }
+    function onVisibility() { if (document.visibilityState === "visible") reload(); }
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [isAdmin, reload]);
+
   if (loading) {
     return (
       <Layout>
@@ -210,12 +224,21 @@ function AdminPage() {
   return (
     <Layout>
       <PageTransition>
-        <div className="mb-6">
-          <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] mb-1">The Eye</p>
-          <h1 className="display text-5xl text-acid leading-none">COMMAND</h1>
-          <p className="text-muted-foreground text-xs mt-1.5">
-            {fixtures.length} fixtures · {markets.length} markets · {teams.length} teams
-          </p>
+        <div className="mb-6 flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] mb-1">The Eye</p>
+            <h1 className="display text-5xl text-acid leading-none">COMMAND</h1>
+            <p className="text-muted-foreground text-xs mt-1.5">
+              {fixtures.length} fixtures · {markets.length} markets · {teams.length} teams
+            </p>
+          </div>
+          <button
+            onClick={reload}
+            className="mt-1 p-2 rounded-xl border border-border text-muted-foreground hover:text-acid hover:border-acid/40 active:scale-90 transition-all flex-shrink-0"
+            title="Refresh data"
+          >
+            <RefreshCw size={16} />
+          </button>
         </div>
 
         <TabBar active={tab} set={setTab} />
