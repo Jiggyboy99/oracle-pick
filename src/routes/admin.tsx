@@ -7,7 +7,7 @@ import { PageTransition } from "@/components/motion/PageTransition";
 import { StaggerGroup, StaggerItem } from "@/components/motion/Stagger";
 import { finalizeFixture } from "@/lib/admin.functions";
 import { toast } from "sonner";
-import { CheckCircle, Clock, Lock, RefreshCw, Zap } from "lucide-react";
+import { CheckCircle, Clock, Lock, Pencil, RefreshCw, Trash2, Zap } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Command — The Eye" }] }),
@@ -25,6 +25,8 @@ type Fixture = {
   kickoff_at: string;
   home_goals: number | null;
   away_goals: number | null;
+  home_team_id: string;
+  away_team_id: string;
   home: { code: string; name: string } | null;
   away: { code: string; name: string } | null;
 };
@@ -163,7 +165,7 @@ function AdminPage() {
       supabase
         .from("fixtures")
         .select(
-          "id,matchday,status,kickoff_at,home_goals,away_goals," +
+          "id,matchday,status,kickoff_at,home_goals,away_goals,home_team_id,away_team_id," +
           "home:teams!fixtures_home_team_id_fkey(code,name)," +
           "away:teams!fixtures_away_team_id_fkey(code,name)"
         )
@@ -258,16 +260,23 @@ function AdminPage() {
 // FIXTURES tab
 // ════════════════════════════════════════════════
 function FixturesTab({ fixtures, teams, onDone }: { fixtures: Fixture[]; teams: Team[]; onDone: () => void }) {
+  const [editing, setEditing] = useState<Fixture | null>(null);
+
   return (
     <StaggerGroup>
       <StaggerItem index={0}>
         <TeamSection teams={teams} onDone={onDone} />
       </StaggerItem>
       <StaggerItem index={1} className="mt-4">
-        <AddFixtureForm teams={teams} onDone={onDone} />
+        <AddFixtureForm
+          teams={teams}
+          editing={editing}
+          onCancelEdit={() => setEditing(null)}
+          onDone={() => { setEditing(null); onDone(); }}
+        />
       </StaggerItem>
       <StaggerItem index={2} className="mt-4">
-        <FixtureList fixtures={fixtures} onDone={onDone} />
+        <FixtureList fixtures={fixtures} onDone={onDone} onEdit={setEditing} />
       </StaggerItem>
     </StaggerGroup>
   );
@@ -393,34 +402,62 @@ function TeamSection({ teams, onDone }: { teams: Team[]; onDone: () => void }) {
   );
 }
 
-function AddFixtureForm({ teams, onDone }: { teams: Team[]; onDone: () => void }) {
+function toLocalDatetimeValue(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function AddFixtureForm({
+  teams, editing, onCancelEdit, onDone,
+}: { teams: Team[]; editing: Fixture | null; onCancelEdit: () => void; onDone: () => void }) {
   const [homeId, setHomeId] = useState("");
   const [awayId, setAwayId] = useState("");
   const [matchday, setMatchday] = useState("1");
   const [kickoff, setKickoff] = useState("");
   const [busy, setBusy] = useState(false);
 
+  useEffect(() => {
+    if (editing) {
+      setHomeId(editing.home_team_id);
+      setAwayId(editing.away_team_id);
+      setMatchday(String(editing.matchday));
+      setKickoff(toLocalDatetimeValue(editing.kickoff_at));
+    } else {
+      setHomeId(""); setAwayId(""); setMatchday("1"); setKickoff("");
+    }
+  }, [editing]);
+
   async function submit() {
     if (!homeId || !awayId || !kickoff) return toast.error("Fill all fields");
     if (homeId === awayId) return toast.error("Home and away must differ");
     setBusy(true);
-    const { error } = await supabase.from("fixtures").insert({
+    const payload = {
       home_team_id: homeId,
       away_team_id: awayId,
       matchday: Number(matchday),
       kickoff_at: new Date(kickoff).toISOString(),
-      status: "upcoming",
-    });
+    };
+    const { error } = editing
+      ? await supabase.from("fixtures").update(payload).eq("id", editing.id)
+      : await supabase.from("fixtures").insert({ ...payload, status: "upcoming" });
     setBusy(false);
     if (error) return toast.error(error.message);
-    toast.success("Fixture created");
+    toast.success(editing ? "Fixture updated" : "Fixture created");
     setHomeId(""); setAwayId(""); setKickoff("");
     onDone();
   }
 
   return (
     <div className="card-bento p-5 space-y-4">
-      <h2 className="display text-2xl text-acid">Add Fixture</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="display text-2xl text-acid">{editing ? "Edit Fixture" : "Add Fixture"}</h2>
+        {editing && (
+          <button onClick={onCancelEdit} className="text-xs text-muted-foreground underline">
+            Cancel edit
+          </button>
+        )}
+      </div>
       <div className="grid grid-cols-2 gap-2">
         <div>
           <label className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Home</label>
@@ -448,17 +485,27 @@ function AddFixtureForm({ teams, onDone }: { teams: Team[]; onDone: () => void }
         </div>
       </div>
       <button onClick={submit} disabled={busy} className={btnAcid}>
-        {busy ? "Creating…" : "+ Create Fixture"}
+        {busy ? (editing ? "Updating…" : "Creating…") : editing ? "Update Fixture" : "+ Create Fixture"}
       </button>
     </div>
   );
 }
 
-function FixtureList({ fixtures, onDone }: { fixtures: Fixture[]; onDone: () => void }) {
+function FixtureList({
+  fixtures, onDone, onEdit,
+}: { fixtures: Fixture[]; onDone: () => void; onEdit: (f: Fixture) => void }) {
   async function setStatus(id: string, status: "upcoming" | "locked" | "finished") {
     const { error } = await supabase.from("fixtures").update({ status }).eq("id", id);
     if (error) toast.error(error.message);
     else { toast.success(status === "locked" ? "Locked for predictions" : "Reopened"); onDone(); }
+  }
+
+  async function del(f: Fixture) {
+    const label = `MD${f.matchday} · ${f.home?.code ?? "?"} vs ${f.away?.code ?? "?"}`;
+    if (!window.confirm(`Delete fixture "${label}"? This also removes its markets, predictions, and oracle picks.`)) return;
+    const { error } = await supabase.from("fixtures").delete().eq("id", f.id);
+    if (error) toast.error(error.message);
+    else { toast.success("Fixture deleted"); onDone(); }
   }
 
   return (
@@ -492,6 +539,12 @@ function FixtureList({ fixtures, onDone }: { fixtures: Fixture[]; onDone: () => 
               {f.status === "locked" && (
                 <button onClick={() => setStatus(f.id, "upcoming")} className={btnGhost}>Unlock</button>
               )}
+              <button onClick={() => onEdit(f)} className={btnGhost} title="Edit fixture">
+                <Pencil size={12} />
+              </button>
+              <button onClick={() => del(f)} className={btnDanger} title="Delete fixture">
+                <Trash2 size={12} />
+              </button>
             </div>
           </div>
         ))}
@@ -725,12 +778,29 @@ function OraclePickCard({ market, existing, onSaved }: { market: Market; existin
   const [conf, setConf] = useState(String(existing?.confidence ?? 0.65));
   const [reason, setReason] = useState(existing?.reasoning ?? "");
   const [busy, setBusy] = useState(false);
+  const [customOpen, setCustomOpen] = useState(false);
+  const [hgC, setHgC] = useState("");
+  const [agC, setAgC] = useState("");
+
+  const isExactScore = market.type === "exact_score" || market.type === "scoreline";
 
   useEffect(() => {
     setPred(existing?.prediction ?? "");
     setConf(String(existing?.confidence ?? 0.65));
     setReason(existing?.reasoning ?? "");
+    setCustomOpen(false); setHgC(""); setAgC("");
   }, [existing]);
+
+  function applyCustomScore() {
+    const hgN = Number(hgC);
+    const agN = Number(agC);
+    if (hgC === "" || agC === "" || isNaN(hgN) || isNaN(agN) || hgN < 0 || agN < 0 || hgN > 15 || agN > 15) {
+      toast.error("Enter valid scores (0-15) for both teams");
+      return;
+    }
+    setPred(`${hgN}-${agN}`);
+    setCustomOpen(false);
+  }
 
   async function save() {
     if (!pred) return toast.error("Select a prediction");
@@ -758,10 +828,57 @@ function OraclePickCard({ market, existing, onSaved }: { market: Market; existin
           </span>
         )}
       </div>
-      <select value={pred} onChange={e => setPred(e.target.value)} className={sel}>
-        <option value="">Oracle's pick…</option>
-        {market.options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
+      {isExactScore ? (
+        <div className="space-y-2">
+          <div className="grid grid-cols-4 gap-1.5">
+            {market.options.map(o => (
+              <button
+                key={o.value}
+                type="button"
+                onClick={() => setPred(o.value)}
+                className={`px-2 py-2 rounded-lg border text-xs font-semibold num transition-colors ${
+                  pred === o.value ? "bg-oracle border-oracle text-white" : "bg-secondary border-border text-foreground"
+                }`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+          {!customOpen ? (
+            <button
+              type="button"
+              onClick={() => setCustomOpen(true)}
+              className={`w-full py-2 rounded-lg border text-xs font-semibold uppercase tracking-wider transition-colors ${
+                pred && !market.options.some(o => o.value === pred)
+                  ? "bg-oracle border-oracle text-white"
+                  : "bg-secondary border-border text-muted-foreground"
+              }`}
+            >
+              {pred && !market.options.some(o => o.value === pred) ? `Custom: ${pred}` : "+ Custom score"}
+            </button>
+          ) : (
+            <div className="flex items-end gap-2">
+              <input
+                type="number" min={0} max={15} placeholder="Home"
+                value={hgC} onChange={e => setHgC(e.target.value)}
+                className={`${inp} text-center`}
+              />
+              <span className="text-muted-foreground pb-2">–</span>
+              <input
+                type="number" min={0} max={15} placeholder="Away"
+                value={agC} onChange={e => setAgC(e.target.value)}
+                className={`${inp} text-center`}
+              />
+              <button type="button" onClick={applyCustomScore} className={btnGhost}>Use</button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <select value={pred} onChange={e => setPred(e.target.value)} className={sel}>
+          <option value="">Oracle's pick…</option>
+          {market.options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      )}
       <div className="space-y-1">
         <div className="flex justify-between text-xs">
           <span className="text-muted-foreground">Confidence</span>

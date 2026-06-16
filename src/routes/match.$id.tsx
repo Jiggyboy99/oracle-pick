@@ -48,6 +48,9 @@ function MatchPage() {
   const [thunkKey, setThunkKey] = useState(0);
   const receiptRef = useRef<HTMLDivElement>(null);
   const calledItFiredRef = useRef(false);
+  const [customOpen, setCustomOpen] = useState<Record<string, boolean>>({});
+  const [customHg, setCustomHg] = useState<Record<string, string>>({});
+  const [customAg, setCustomAg] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth" });
@@ -126,6 +129,21 @@ function MatchPage() {
   function selectPick(marketId: string, value: string) {
     if (locked) return;
     setPicks((p) => ({ ...p, [marketId]: value }));
+  }
+
+  function applyCustomScore(marketId: string) {
+    const hgN = Number(customHg[marketId]);
+    const agN = Number(customAg[marketId]);
+    if (
+      customHg[marketId] === undefined || customAg[marketId] === undefined ||
+      customHg[marketId] === "" || customAg[marketId] === "" ||
+      isNaN(hgN) || isNaN(agN) || hgN < 0 || agN < 0 || hgN > 15 || agN > 15
+    ) {
+      toast.error("Enter valid scores (0-15) for both teams");
+      return;
+    }
+    selectPick(marketId, `${hgN}-${agN}`);
+    setCustomOpen((o) => ({ ...o, [marketId]: false }));
   }
 
   async function lockIn() {
@@ -300,7 +318,7 @@ function MatchPage() {
               label: o.label,
               pct: (counts[o.value] / total) * 100,
             }));
-            const userPct = userPick ? (counts[userPick] / total) * 100 : 0;
+            const userPct = userPick ? ((counts[userPick] ?? 0) / total) * 100 : 0;
 
             return (
               <motion.div
@@ -410,6 +428,69 @@ function MatchPage() {
                     })}
                   </div>
 
+                  {/* free-form exact score entry */}
+                  {mk.type === "exact_score" && (
+                    <div className="mt-2">
+                      {!customOpen[mk.id] ? (
+                        <button
+                          onClick={() => !locked && setCustomOpen((o) => ({ ...o, [mk.id]: true }))}
+                          disabled={!!locked}
+                          className={[
+                            "w-full px-3 py-3 rounded-2xl border text-sm font-semibold tracking-wide uppercase transition-colors",
+                            userPick && !opts.some((o) => o.value === userPick)
+                              ? userPick === calledScore
+                                ? "bg-acid border-acid text-acid-foreground ring-2 ring-acid/60 ring-offset-2 ring-offset-[#0F0F16]"
+                                : "bg-acid border-acid text-acid-foreground"
+                              : "bg-white/[0.03] border-white/10 hover:border-white/25 hover:bg-white/[0.06] text-white/70",
+                            locked && !(userPick && !opts.some((o) => o.value === userPick)) ? "opacity-40" : "",
+                          ].join(" ")}
+                        >
+                          {userPick && !opts.some((o) => o.value === userPick)
+                            ? `Custom: ${userPick}`
+                            : "+ Custom score"}
+                        </button>
+                      ) : (
+                        <div className="flex items-end gap-2 p-3 rounded-2xl border border-white/10 bg-white/[0.03]">
+                          <div className="flex-1">
+                            <label className="text-[9px] tracking-[0.25em] uppercase text-white/40 block mb-1">
+                              {fixture.home.code}
+                            </label>
+                            <input
+                              type="number" min={0} max={15} placeholder="0"
+                              value={customHg[mk.id] ?? ""}
+                              onChange={(e) => setCustomHg((s) => ({ ...s, [mk.id]: e.target.value }))}
+                              className="w-full px-3 py-2 rounded-xl bg-white/[0.05] border border-white/10 text-center num text-lg text-white focus:outline-none focus:border-acid/50"
+                            />
+                          </div>
+                          <span className="text-white/30 pb-2">–</span>
+                          <div className="flex-1">
+                            <label className="text-[9px] tracking-[0.25em] uppercase text-white/40 block mb-1">
+                              {fixture.away.code}
+                            </label>
+                            <input
+                              type="number" min={0} max={15} placeholder="0"
+                              value={customAg[mk.id] ?? ""}
+                              onChange={(e) => setCustomAg((s) => ({ ...s, [mk.id]: e.target.value }))}
+                              className="w-full px-3 py-2 rounded-xl bg-white/[0.05] border border-white/10 text-center num text-lg text-white focus:outline-none focus:border-acid/50"
+                            />
+                          </div>
+                          <button
+                            onClick={() => applyCustomScore(mk.id)}
+                            className="px-3 py-2.5 rounded-xl bg-acid text-acid-foreground font-bold text-xs uppercase tracking-wider active:scale-95"
+                          >
+                            Use
+                          </button>
+                          <button
+                            onClick={() => setCustomOpen((o) => ({ ...o, [mk.id]: false }))}
+                            className="px-2 py-2.5 text-white/40 text-xs"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* consensus bar */}
                   {marketPreds.length > 0 && (
                     <div className="mt-5">
@@ -487,10 +568,10 @@ function MatchPage() {
                     <span className="text-white/50 truncate pr-2">{mk.label}</span>
                     <span
                       className={
-                        opt ? "num text-white" : "text-white/20 text-xs tracking-[0.2em] uppercase"
+                        picked ? "num text-white" : "text-white/20 text-xs tracking-[0.2em] uppercase"
                       }
                     >
-                      {opt ? opt.label : "—"}
+                      {picked ? (opt?.label ?? picked) : "—"}
                     </span>
                   </li>
                 );
