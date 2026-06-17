@@ -40,10 +40,12 @@ function LeaguesPage() {
 
   async function load() {
     if (!user) return;
-    const { data: mem } = await supabase
+    const { data: mem, error: loadErr } = await supabase
       .from("league_members")
       .select("leagues(id, name, invite_code, creator_id, join_type, show_past_results)")
       .eq("user_id", user.id);
+    console.log("[leagues] load →", { mem, error: loadErr });
+    if (loadErr) { toast.error(loadErr.message); return; }
     setLeagues((mem ?? []).map((m: any) => m.leagues).filter(Boolean));
   }
   useEffect(() => { load(); }, [user]);
@@ -57,8 +59,13 @@ function LeaguesPage() {
       .insert({ name: name.trim(), invite_code: code, creator_id: user.id, join_type: joinType, show_past_results: showPastResults })
       .select()
       .single();
+    console.log("[leagues] insert league →", { data, error });
     if (error) { toast.error(error.message); setBusyCreate(false); return; }
-    await supabase.from("league_members").insert({ league_id: data.id, user_id: user.id });
+    const { error: memErr } = await supabase
+      .from("league_members")
+      .insert({ league_id: data.id, user_id: user.id });
+    console.log("[leagues] insert member →", { error: memErr });
+    if (memErr) { toast.error(memErr.message); setBusyCreate(false); return; }
     toast.success(`League created — code: ${code}`);
     setName(""); setCreating(false); setBusyCreate(false);
     load();
